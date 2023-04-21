@@ -8,7 +8,7 @@ namespace PerlinNoise_console
 {
     internal class NumericValueArray
     {
-        double leftBor = 1.7;
+        double leftBor = 2.25;
         double rightBor = 3.0;
         public NumericValueArray(double rb) //конструктор, для передачи параметров использовать создание экземпляра класса
         {
@@ -51,7 +51,7 @@ namespace PerlinNoise_console
             return matrix;
         }
 
-        public List<List<double>> CompilationArray(int numsArrLayer)
+        public List<List<double>> CompilationArray(int numsArrLayer) //основная математика по образованию шума
         {
             int nowGenSize = 2;
             var mtxSmall = ArrayInitialization(nowGenSize); //через генерирование один раз создается маленький
@@ -88,12 +88,65 @@ namespace PerlinNoise_console
                 //Console.WriteLine($"S-{mtxSmall.Count} L-{mtxLarge.Count}");
             }
 
+            for (int i = 0; i < mtxSmall.Count; i++) //возведение в квадрат. При этом добавлении лучше менять левую границу
+            {
+                for (int j = 0; j < mtxSmall.Count; j++)
+                {
+                    mtxSmall[i][j] = mtxSmall[i][j] * mtxSmall[i][j];
+
+                }
+            }
+
+
             return mtxSmall;
         }
 
-        public List<List<double>> ArrayNormalization(List<List<double>> doneMatrix, int numsArrLayer)
+        public List<List<double>> ArrayInterpolation(List<List<double>> doneMatrix) //сглаживание пикселей (дабавление градиента)
         {
-            //double teorMax = Math.Pow(rightBor, numsArrLayer);
+
+
+            for (int i = 1; i < doneMatrix.Count - 1; i++)
+            {
+                for (int j = 1; j < doneMatrix.Count - 1; j++)
+                {
+                    double sumOfNine =
+                        doneMatrix[i][j] +
+                        doneMatrix[i - 1][j - 1] +
+                        doneMatrix[i - 1][j] +
+                        doneMatrix[i][j - 1] +
+                        doneMatrix[i - 1][j + 1] +
+                        doneMatrix[i + 1][j - 1] +
+                        doneMatrix[i + 1][j] +
+                        doneMatrix[i][j + 1] +
+                        doneMatrix[i + 1][j + 1];
+
+                    double averageOfNine = sumOfNine / 9;
+
+                    doneMatrix[i][j] = averageOfNine;
+                    doneMatrix[i - 1][j - 1] = averageOfNine;
+                    doneMatrix[i - 1][j] = averageOfNine;
+                    doneMatrix[i][j - 1] = averageOfNine;
+                    doneMatrix[i - 1][j + 1] = averageOfNine;
+                    doneMatrix[i + 1][j - 1] = averageOfNine;
+                    doneMatrix[i + 1][j] = averageOfNine;
+                    doneMatrix[i][j + 1] = averageOfNine;
+                    doneMatrix[i + 1][j + 1] = averageOfNine;
+
+                }
+            }
+
+
+            return doneMatrix;
+        }
+
+        public List<List<double>> ArrayNormalization(List<List<double>> doneMatrix) //нормализуем, чтобы впихнуть в графический файл
+        {
+            for (int i = 0; i < 1; i++)
+            {
+                doneMatrix = ArrayInterpolation(doneMatrix); //сглаживание
+
+            }
+
 
             double maxFromMatrix = 0;
             for (int i = 0; i < doneMatrix.Count; i++)

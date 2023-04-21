@@ -26,7 +26,7 @@ namespace PerlinNoise_console
             //    }
             //}
 
-            var myNormDoneMatrix = mainNumArr.ArrayNormalization(myDoneMatrix, layerСount);
+            var myNormDoneMatrix = mainNumArr.ArrayNormalization(myDoneMatrix);
             //for (int i = 0; i < myNormDoneMatrix.Count; i++)
             //{
             //    Console.WriteLine();
@@ -42,6 +42,7 @@ namespace PerlinNoise_console
             var crIm = new ImageСreation();
             crIm.CreateImage(myNormDoneMatrix);
 
+            Console.WriteLine($"Done");
             Console.ReadLine();
         }
 
