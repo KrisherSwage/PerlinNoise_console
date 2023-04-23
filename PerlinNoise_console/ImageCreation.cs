@@ -86,11 +86,10 @@ namespace PerlinNoise_console
                     {
                         for (int j = 0; j < mainMatrix.Count; j++)
                         {
+                            //Console.WriteLine(mainMatrix[i - 1][j]);
                             fstream.WriteByte(Convert.ToByte(Math.Round(mainMatrix[i - 1][j])));
                             fstream.WriteByte(Convert.ToByte(Math.Round(mainMatrix[i - 1][j])));
                             fstream.WriteByte(Convert.ToByte(Math.Round(mainMatrix[i - 1][j])));
-
-
 
                             //блок дописания байтов для кратности на 4
                             if ((i + j % (3 * inputSize) == 0) && (multipleOfFour != 0))

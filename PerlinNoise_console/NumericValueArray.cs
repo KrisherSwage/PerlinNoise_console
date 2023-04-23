@@ -8,11 +8,16 @@ namespace PerlinNoise_console
 {
     internal class NumericValueArray
     {
-        double leftBor = 2.25;
-        double rightBor = 3.0;
-        public NumericValueArray(double rb) //конструктор, для передачи параметров использовать создание экземпляра класса
+        //0 - черный
+        //255 - белый
+        double leftBor = 0.0;
+        double rightBor = 0.0;
+        public NumericValueArray(double rb, double lb) //конструктор, для передачи параметров использовать создание экземпляра класса
         {
+            leftBor = lb;
             rightBor = rb;
+
+
         }
 
         static Random rnd = new Random();
@@ -32,19 +37,11 @@ namespace PerlinNoise_console
             }
             //matrix[columns][lines]
 
-            //чем больше "слоёв", тем больше плавность и размер
-            //1000*1000 - уже норм, но чтобы с запасом...
-            //2^10 = 1024... 11 = 2048... 12 = 4096
-            //пока что 12 слооев сделать верхней границей
-
-            //ЗНАЧИТ, что перемножений всего  штук
-
             for (int i = 0; i < sizeArr; i++)
             {
                 for (int j = 0; j < sizeArr; j++)
                 {
-                    matrix[i][j] = rnd.NextDouble() * (rightBor - leftBor) + leftBor;
-                    //3^11 = 177147
+                    matrix[i][j] = rnd.NextDouble() * (rightBor - leftBor) + leftBor; //вот эта строка ответственна за общую гамму
                 }
             }
 
@@ -62,15 +59,10 @@ namespace PerlinNoise_console
 
             for (int w = 1; w < numsArrLayer; w++)
             {
-
-
-
                 for (int i = 0; i < nowGenSize; i++) //перемножение чисел
                 {
                     for (int j = 0; j < nowGenSize; j++) //перебор придумал сам
                     {
-                        //Console.WriteLine($"i-{i * 2} j-{j * 2} ngs-{nowGenSize}");
-                        //Console.WriteLine(mtxLarge[i * 2][j * 2]);
                         mtxLarge[i * 2][j * 2] = mtxLarge[i * 2][j * 2] * mtxSmall[i][j];
                         mtxLarge[i * 2][j * 2 + 1] = mtxLarge[i * 2][j * 2 + 1] * mtxSmall[i][j];
                         mtxLarge[i * 2 + 1][j * 2] = mtxLarge[i * 2 + 1][j * 2] * mtxSmall[i][j];
@@ -82,99 +74,269 @@ namespace PerlinNoise_console
 
                 mtxSmall = mtxLarge;
 
-                //Console.WriteLine(nowGenSize);
                 if (w != numsArrLayer - 1)
                     mtxLarge = ArrayInitialization(nowGenSize * 2);
-                //Console.WriteLine($"S-{mtxSmall.Count} L-{mtxLarge.Count}");
+
             }
 
-            for (int i = 0; i < mtxSmall.Count; i++) //возведение в квадрат. При этом добавлении лучше менять левую границу
-            {
-                for (int j = 0; j < mtxSmall.Count; j++)
-                {
-                    mtxSmall[i][j] = mtxSmall[i][j] * mtxSmall[i][j];
+            Console.WriteLine("Compilation");
+            //Console.WriteLine($"После создания {AverageNum(mtxSmall)}");
 
-                }
-            }
-
+            //mtxSmall = ArrayDivMin(mtxSmall);
+            mtxSmall = ArrayExponentiation(mtxSmall);
+            mtxSmall = ArrayNormalization(mtxSmall);
+            mtxSmall = ArrayBlurring(mtxSmall);
 
             return mtxSmall;
         }
 
-        public List<List<double>> ArrayInterpolation(List<List<double>> doneMatrix) //сглаживание пикселей (дабавление градиента)
+
+        private List<List<double>> ArrayExponentiation(List<List<double>> matrix)
         {
+            bool expon = true;
 
-
-            for (int i = 1; i < doneMatrix.Count - 1; i++)
+            if (expon == true)
             {
-                for (int j = 1; j < doneMatrix.Count - 1; j++)
+                for (int i = 0; i < matrix.Count; i++) //возведение в степень значений. При этом добавлении лучше менять левую границу
                 {
-                    double sumOfNine =
-                        doneMatrix[i][j] +
-                        doneMatrix[i - 1][j - 1] +
-                        doneMatrix[i - 1][j] +
-                        doneMatrix[i][j - 1] +
-                        doneMatrix[i - 1][j + 1] +
-                        doneMatrix[i + 1][j - 1] +
-                        doneMatrix[i + 1][j] +
-                        doneMatrix[i][j + 1] +
-                        doneMatrix[i + 1][j + 1];
-
-                    double averageOfNine = sumOfNine / 9;
-
-                    doneMatrix[i][j] = averageOfNine;
-                    doneMatrix[i - 1][j - 1] = averageOfNine;
-                    doneMatrix[i - 1][j] = averageOfNine;
-                    doneMatrix[i][j - 1] = averageOfNine;
-                    doneMatrix[i - 1][j + 1] = averageOfNine;
-                    doneMatrix[i + 1][j - 1] = averageOfNine;
-                    doneMatrix[i + 1][j] = averageOfNine;
-                    doneMatrix[i][j + 1] = averageOfNine;
-                    doneMatrix[i + 1][j + 1] = averageOfNine;
-
+                    for (int j = 0; j < matrix.Count; j++)
+                    {
+                        matrix[i][j] = Math.Pow(matrix[i][j], 2);
+                    }
                 }
+
+                Console.WriteLine("Exp");
+                //Console.WriteLine($"После возведения в степень {AverageNum(matrix)}");
             }
 
+            return matrix;
+        }
+
+        private List<List<double>> ArrayBlurring(List<List<double>> doneMatrix) //сглаживание пикселей (дабавление градиента)
+        {
+            bool blur = true;
+            bool blurVer = true;
+            bool blurHor = true;
+
+            if (blur == true) //нужно/не нужно сейчас сгладить изображение
+            {
+                if (blurVer == true) //обрабатываем по вертикале
+                {
+                    for (int i = 1; i < doneMatrix.Count - 1; i++)
+                    {
+                        for (int j = 1; j < doneMatrix.Count - 1; j++)
+                        {
+                            double sumOfNine =
+                                doneMatrix[i][j] +
+                                doneMatrix[i - 1][j - 1] +
+                                doneMatrix[i - 1][j] +
+                                doneMatrix[i][j - 1] +
+                                doneMatrix[i - 1][j + 1] +
+                                doneMatrix[i + 1][j - 1] +
+                                doneMatrix[i + 1][j] +
+                                doneMatrix[i][j + 1] +
+                                doneMatrix[i + 1][j + 1];
+
+                            double averageOfNine = sumOfNine / 9;
+
+                            doneMatrix[i][j] = averageOfNine;
+                            doneMatrix[i - 1][j - 1] = averageOfNine;
+                            doneMatrix[i - 1][j] = averageOfNine;
+                            doneMatrix[i][j - 1] = averageOfNine;
+                            doneMatrix[i - 1][j + 1] = averageOfNine;
+                            doneMatrix[i + 1][j - 1] = averageOfNine;
+                            doneMatrix[i + 1][j] = averageOfNine;
+                            doneMatrix[i][j + 1] = averageOfNine;
+                            doneMatrix[i + 1][j + 1] = averageOfNine;
+
+                        }
+                    }
+                    Console.WriteLine("BlurVer");
+                }
+
+                if (blurHor == true) //обрабатываем по горизонтали
+                {
+                    for (int j = 1; j < doneMatrix.Count - 1; j++)
+                    {
+                        for (int i = 1; i < doneMatrix.Count - 1; i++)
+                        {
+                            double sumOfNine =
+                                doneMatrix[i][j] +
+                                doneMatrix[i - 1][j - 1] +
+                                doneMatrix[i - 1][j] +
+                                doneMatrix[i][j - 1] +
+                                doneMatrix[i - 1][j + 1] +
+                                doneMatrix[i + 1][j - 1] +
+                                doneMatrix[i + 1][j] +
+                                doneMatrix[i][j + 1] +
+                                doneMatrix[i + 1][j + 1];
+
+                            double averageOfNine = sumOfNine / 9;
+
+                            doneMatrix[i][j] = averageOfNine;
+                            doneMatrix[i - 1][j - 1] = averageOfNine;
+                            doneMatrix[i - 1][j] = averageOfNine;
+                            doneMatrix[i][j - 1] = averageOfNine;
+                            doneMatrix[i - 1][j + 1] = averageOfNine;
+                            doneMatrix[i + 1][j - 1] = averageOfNine;
+                            doneMatrix[i + 1][j] = averageOfNine;
+                            doneMatrix[i][j + 1] = averageOfNine;
+                            doneMatrix[i + 1][j + 1] = averageOfNine;
+
+                        }
+                    }
+                    Console.WriteLine("BlurHor");
+                }
+
+            }
 
             return doneMatrix;
         }
 
-        public List<List<double>> ArrayNormalization(List<List<double>> doneMatrix) //нормализуем, чтобы впихнуть в графический файл
-        {
-            for (int i = 0; i < 1; i++)
-            {
-                doneMatrix = ArrayInterpolation(doneMatrix); //сглаживание
+        #region badNormalization
+        ////не совсем рабочий метод
+        //public List<List<double>> ArrayNormalization(List<List<double>> doneMatrix) //нормализуем, чтобы впихнуть в графический файл
+        //{
+        //    //for (int i = 0; i < 1; i++) //чтобы несколько раз
+        //    //{
+        //    //    doneMatrix = ArrayBlurring(doneMatrix); //сглаживание
+        //    //}
 
+        //    double maxFromMatrix = FindMax(doneMatrix);
+
+        //    double normalizationFactor = 255 / maxFromMatrix; //коэффициент для нормализации
+
+        //    for (int i = 0; i < doneMatrix.Count; i++)
+        //    {
+        //        for (int j = 0; j < doneMatrix.Count; j++)
+        //        {
+        //            doneMatrix[i][j] = Math.Round(doneMatrix[i][j] * normalizationFactor, 2);
+        //        }
+        //    }
+
+        //    Console.WriteLine("Normalization");
+        //    Console.WriteLine($"После нормализации {AverageNum(doneMatrix)}");
+        //    return doneMatrix;
+
+        //    //не совсем рабочий метод
+        //}
+        #endregion
+
+        public List<List<double>> ArrayNormalization(List<List<double>> matrix) //нормализуем, чтобы впихнуть в графический файл
+        {
+            double maxFromMatrix = FindMax(matrix);
+            double minFrMatrix = FindMin(matrix);
+            double delta = (maxFromMatrix - minFrMatrix) / 255.0; //хороший вопрос - не напутал ли я чего с общим диапазоном (0-255)
+            double increasingDelta = minFrMatrix - delta;
+
+            for (int i = 0; i < matrix.Count; i++)
+            {
+                for (int j = 0; j < matrix.Count; j++)
+                {
+
+                    for (int k = 0; k < 256; k++) //каждое значение перебирается еще до 255 раз
+                    {
+                        increasingDelta += delta;
+                        //уверен, есть и более эффективный алгоритм. Но пока так
+                        //перебор чисел на принадлежность какому-то отрезку
+                        if ((matrix[i][j] >= increasingDelta) && (matrix[i][j] <= increasingDelta + delta))
+                        {
+                            matrix[i][j] = k;
+                            break;
+                        }
+
+                        if (k == 255)
+                        {
+                            Console.WriteLine("есть проблемка");
+                        }
+                    }
+
+                    increasingDelta = minFrMatrix - delta;
+                }
             }
 
+            Console.WriteLine("Normalization");
+            //Console.WriteLine($"После нормализации {AverageNum(matrix)}");
+            return matrix;
+        }
 
-            double maxFromMatrix = 0;
+        public List<List<double>> ArrayDivMin(List<List<double>> doneMatrix) //разделим на минимум
+        {
+            //не знаю точно, пригодится ли это, но пусть будет
+            double minFromMatrix = FindMin(doneMatrix);
+
             for (int i = 0; i < doneMatrix.Count; i++)
             {
                 for (int j = 0; j < doneMatrix.Count; j++)
                 {
-                    //Console.Write($"{Math.Round(notNormList[i][j], 1)} ");
+                    doneMatrix[i][j] = Math.Round(doneMatrix[i][j] / minFromMatrix, 2);
+                }
+            }
 
-                    //doneList[i][j] = Math.Round(doneList[i][j] / teorMax, 2);
-                    if (doneMatrix[i][j] > maxFromMatrix)
+            Console.WriteLine("Normalization");
+            //Console.WriteLine($"После нормализации {AverageNum(doneMatrix)}");
+            return doneMatrix;
+        }
+
+
+        private long AverageNum(List<List<double>> matrix) //среднее значение в массиве
+        {
+            long result = 0;
+            long strSum = 0;
+
+            for (int i = 0; i < matrix.Count; i++)
+            {
+                strSum = 0;
+                for (int j = 0; j < matrix.Count; j++)
+                {
+                    strSum += Convert.ToInt64(Math.Round(matrix[i][j]));
+                }
+                strSum /= matrix.Count;
+                result += strSum;
+            }
+            result /= matrix.Count;
+
+            Console.WriteLine("Aver num");
+            return result;
+        }
+
+        private double FindMax(List<List<double>> matrix) //поиск максимального
+        {
+            double maxFromMatrix = 0;
+            for (int i = 0; i < matrix.Count; i++)
+            {
+                for (int j = 0; j < matrix.Count; j++)
+                {
+
+                    if (matrix[i][j] > maxFromMatrix)
                     {
-                        maxFromMatrix = doneMatrix[i][j];
+                        maxFromMatrix = matrix[i][j]; //поиск максимума
                     }
 
                 }
             }
+            Console.WriteLine("max");
+            return maxFromMatrix;
+        }
 
-            double normalizationFactor = 255 / maxFromMatrix;
+        private double FindMin(List<List<double>> matrix) //поиск минимального
+        {
+            double mixFromMatrix = matrix[0][0];
 
-            for (int i = 0; i < doneMatrix.Count; i++)
+            for (int i = 0; i < matrix.Count; i++)
             {
-                for (int j = 0; j < doneMatrix.Count; j++)
+                for (int j = 0; j < matrix.Count; j++)
                 {
-                    doneMatrix[i][j] = Math.Round(doneMatrix[i][j] * normalizationFactor, 2);
+
+                    if (matrix[i][j] < mixFromMatrix)
+                    {
+                        mixFromMatrix = matrix[i][j]; //поиск минимума
+                    }
+
                 }
             }
-
-            return doneMatrix;
+            Console.WriteLine("min");
+            return mixFromMatrix;
         }
     }
 }
