@@ -15,7 +15,8 @@ namespace PerlinNoise_console
             //int inputSize = Convert.ToInt32(Console.ReadLine());
 
             //var pathNewBMP = args[1];
-            var pathNewBMP = $@"{Directory.GetCurrentDirectory()}\Noise.bmp";
+            Directory.CreateDirectory($@"{Directory.GetCurrentDirectory()}\monochrome");
+            var pathNewBMP = $@"{Directory.GetCurrentDirectory()}\monochrome\Noise.bmp";
 
             if (inputSize < 0)
             {
@@ -63,8 +64,6 @@ namespace PerlinNoise_console
                 0, 0, 0, 0, //"const"
             };
 
-            const double gamma = 2.2;
-
             using (FileStream fstream = new FileStream(pathNewBMP, FileMode.Create))
             {
                 byte[] buffer = new byte[header.Length]; //блок записи заголовка
@@ -77,10 +76,6 @@ namespace PerlinNoise_console
                 if (inputSize % 8 == 0)
                 {
                     int multipleOfFour = (3 * inputSize) % 4;
-                    bool isBlack = true;
-                    int enumOfPix = inputSize / 8;
-                    int konkrPix = 0;
-                    int horizEven = 0;
 
                     for (int i = 1; i <= mainMatrix.Count; i++)
                     {

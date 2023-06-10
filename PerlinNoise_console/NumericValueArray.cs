@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Aspose.Imaging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,19 +10,58 @@ namespace PerlinNoise_console
 {
     internal class NumericValueArray
     {
-        //0 - черный
-        //255 - белый
+        //0 - черный - вода
+        //255 - белый - горы
         double leftBor = 0.0;
         double rightBor = 0.0;
-        public NumericValueArray(double rb, double lb) //конструктор, для передачи параметров использовать создание экземпляра класса
+        int numLay = 0;
+
+        static Random rnd = new Random(); //900 для одинаковости во время разработки
+
+        List<List<double>> matrixAll = new List<List<double>>();
+        List<List<double>> rawFullMatrix = new List<List<double>>();
+
+        public NumericValueArray(double rb, double lb, int nL) //конструктор, для передачи параметров использовать создание экземпляра класса
         {
             leftBor = lb;
             rightBor = rb;
-
-
+            numLay = nL;
         }
 
-        static Random rnd = new Random();
+        public List<List<double>> CreateMatrix() //управление различными преобразованиями
+        {
+            matrixAll = CompilationArray(numLay);
+
+            //matrixAll = ArrayRemainderOfDivision(matrixAll, 255);
+            //matrixAll = ArrayBlurring(matrixAll);
+
+            //matrixAll = ArrayExponentiation(matrixAll, 4);
+            matrixAll = ArrayRemainderOfDivision(matrixAll, 255);
+            //matrixAll = ArrayBlurring(matrixAll);
+            //matrixAll = ArrayBlurring(matrixAll);
+            ///////matrixAll = ArrayBlurring(matrixAll);
+
+
+            matrixAll = ArrayExponentiation(matrixAll, 6);
+            //matrixAll = ArrayMultiplArray(matrixAll, rawFullMatrix);
+            //matrixAll = ArrayExponentiation(matrixAll, 4);
+
+
+            //matrixAll = ArrayInterpolation(matrixAll);
+            //matrixAll = ArrayNormalization(matrixAll);
+            matrixAll = ArrayDifferentMathTest(matrixAll);
+
+            //matrixAll = ArrayBlurring(matrixAll);
+            //matrixAll = ArrayBlurring(matrixAll);
+
+            matrixAll = ArrayBlurring(matrixAll);
+            matrixAll = ArrayNormalization(matrixAll); //нормализацию после всего остального!!!
+
+            return matrixAll;
+        }
+
+
+
 
         private List<List<double>> ArrayInitialization(int sizeArr)
         {
@@ -79,29 +120,64 @@ namespace PerlinNoise_console
 
             }
 
+            rawFullMatrix = mtxSmall;
+            Console.WriteLine($"\nMaxRaw = {FindMax(mtxSmall)}; MinRaw = {FindMin(mtxSmall)}\n");
+            //Console.WriteLine($"% 255 = {FindMax(mtxSmall) % 255}  {FindMin(mtxSmall) % 255}\n");
+            if (FindMax(mtxSmall) > Math.Pow(rightBor, numLay))
+            {
+                throw new Exception("больше возведения в степень");
+            }
             Console.WriteLine("Compilation");
-            //Console.WriteLine($"После создания {AverageNum(mtxSmall)}");
-
-            //mtxSmall = ArrayDivMin(mtxSmall);
-            mtxSmall = ArrayExponentiation(mtxSmall);
-            mtxSmall = ArrayNormalization(mtxSmall);
-            mtxSmall = ArrayBlurring(mtxSmall);
+            ////Console.WriteLine($"После создания {AverageNum(mtxSmall)}");
 
             return mtxSmall;
         }
 
+        private List<List<double>> ArrayDifferentMathTest(List<List<double>> matrix)
+        {
+            double maxFromMatrix = FindMax(matrix);
+            double minFrMatrix = FindMin(matrix);
+            double delta = (maxFromMatrix - minFrMatrix) / 100.0; //хороший вопрос - не напутал ли я чего с общим диапазоном (0-255)
 
-        private List<List<double>> ArrayExponentiation(List<List<double>> matrix)
+            for (int i = 0; i < matrix.Count; i++)
+            {
+                for (int j = 0; j < matrix.Count; j++)
+                {
+                    if (matrix[i][j] >= maxFromMatrix - delta * 90)
+                    {
+                        matrix[i][j] *= matrix[i][j];
+                    }
+                }
+            }
+            Console.WriteLine("Math");
+            return matrix;
+        }
+
+        private List<List<double>> ArrayMultiplArray(List<List<double>> matrixDone, List<List<double>> matrixRaw) //a*b
+        {
+            //как будто, мало что даёт
+            for (int i = 0; i < matrixRaw.Count; i++)
+            {
+                for (int j = 0; j < matrixRaw.Count; j++)
+                {
+                    matrixDone[i][j] = matrixRaw[i][j] * matrixDone[i][j];
+                }
+            }
+            Console.WriteLine("Multip 2 arr");
+            return matrixDone;
+        }
+
+        private List<List<double>> ArrayExponentiation(List<List<double>> matrix, double exp) //a^b
         {
             bool expon = true;
 
             if (expon == true)
             {
-                for (int i = 0; i < matrix.Count; i++) //возведение в степень значений. При этом добавлении лучше менять левую границу
+                for (int i = 0; i < matrix.Count; i++) //возведение в степень значений
                 {
                     for (int j = 0; j < matrix.Count; j++)
                     {
-                        matrix[i][j] = Math.Pow(matrix[i][j], 2);
+                        matrix[i][j] = Math.Pow(matrix[i][j], exp);
                     }
                 }
 
@@ -117,6 +193,7 @@ namespace PerlinNoise_console
             bool blur = true;
             bool blurVer = true;
             bool blurHor = true;
+            bool blurBorders = true;
 
             if (blur == true) //нужно/не нужно сейчас сгладить изображение
             {
@@ -156,6 +233,7 @@ namespace PerlinNoise_console
 
                 if (blurHor == true) //обрабатываем по горизонтали
                 {
+
                     for (int j = 1; j < doneMatrix.Count - 1; j++)
                     {
                         for (int i = 1; i < doneMatrix.Count - 1; i++)
@@ -188,97 +266,218 @@ namespace PerlinNoise_console
                     Console.WriteLine("BlurHor");
                 }
 
+                if (blurBorders == true) //обработка границ
+                {
+                    int len = doneMatrix.Count;
+                    //doneMatrix[len][len] = 0;
+
+                    for (int i = 1; i < doneMatrix.Count - 1; i++)
+                    {
+                        //верхняя
+                        double sumOfNine =
+                                doneMatrix[i][0] +
+                                doneMatrix[i - 1][0] +
+                                doneMatrix[i - 1][1] +
+                                doneMatrix[i + 1][0] +
+                                doneMatrix[i][1] +
+                                doneMatrix[i + 1][1];
+
+                        double averageOfNine = sumOfNine / 6;
+
+                        doneMatrix[i][0] = averageOfNine;
+                        doneMatrix[i - 1][0] = averageOfNine;
+                        doneMatrix[i - 1][1] = averageOfNine;
+                        doneMatrix[i + 1][0] = averageOfNine;
+                        doneMatrix[i][1] = averageOfNine;
+                        doneMatrix[i + 1][1] = averageOfNine;
+
+                        //нижняя
+                        sumOfNine =
+                                doneMatrix[i][len - 1] +
+                                doneMatrix[i - 1][len - 2] +
+                                doneMatrix[i - 1][len - 1] +
+                                doneMatrix[i][len - 2] +
+                                doneMatrix[i + 1][len - 2] +
+                                doneMatrix[i + 1][len - 1];
+
+                        averageOfNine = sumOfNine / 6;
+
+                        doneMatrix[i][len - 1] = averageOfNine;
+                        doneMatrix[i - 1][len - 2] = averageOfNine;
+                        doneMatrix[i - 1][len - 1] = averageOfNine;
+                        doneMatrix[i][len - 2] = averageOfNine;
+                        doneMatrix[i + 1][len - 2] = averageOfNine;
+                        doneMatrix[i + 1][len - 1] = averageOfNine;
+
+                        //левая
+                        sumOfNine =
+                                doneMatrix[0][i] +
+                                doneMatrix[0][i - 1] +
+                                doneMatrix[1][i - 1] +
+                                doneMatrix[1][i] +
+                                doneMatrix[0][i + 1] +
+                                doneMatrix[1][i + 1];
+
+                        averageOfNine = sumOfNine / 6;
+
+                        doneMatrix[0][i] = averageOfNine;
+                        doneMatrix[0][i - 1] = averageOfNine;
+                        doneMatrix[1][i - 1] = averageOfNine;
+                        doneMatrix[1][i] = averageOfNine;
+                        doneMatrix[0][i + 1] = averageOfNine;
+                        doneMatrix[1][i + 1] = averageOfNine;
+
+                        //правая
+                        sumOfNine =
+                                doneMatrix[len - 1][i] +
+                                doneMatrix[len - 2][i - 1] +
+                                doneMatrix[len - 2][i] +
+                                doneMatrix[len - 1][i - 1] +
+                                doneMatrix[len - 2][i + 1] +
+                                doneMatrix[len - 1][i + 1];
+
+                        averageOfNine = sumOfNine / 6;
+
+                        doneMatrix[len - 1][i] = averageOfNine;
+                        doneMatrix[len - 2][i - 1] = averageOfNine;
+                        doneMatrix[len - 2][i] = averageOfNine;
+                        doneMatrix[len - 1][i - 1] = averageOfNine;
+                        doneMatrix[len - 2][i + 1] = averageOfNine;
+                        doneMatrix[len - 1][i + 1] = averageOfNine;
+
+                    }
+
+
+                }
+
             }
 
             return doneMatrix;
         }
 
-        #region badNormalization
-        ////не совсем рабочий метод
-        //public List<List<double>> ArrayNormalization(List<List<double>> doneMatrix) //нормализуем, чтобы впихнуть в графический файл
-        //{
-        //    //for (int i = 0; i < 1; i++) //чтобы несколько раз
-        //    //{
-        //    //    doneMatrix = ArrayBlurring(doneMatrix); //сглаживание
-        //    //}
-
-        //    double maxFromMatrix = FindMax(doneMatrix);
-
-        //    double normalizationFactor = 255 / maxFromMatrix; //коэффициент для нормализации
-
-        //    for (int i = 0; i < doneMatrix.Count; i++)
-        //    {
-        //        for (int j = 0; j < doneMatrix.Count; j++)
-        //        {
-        //            doneMatrix[i][j] = Math.Round(doneMatrix[i][j] * normalizationFactor, 2);
-        //        }
-        //    }
-
-        //    Console.WriteLine("Normalization");
-        //    Console.WriteLine($"После нормализации {AverageNum(doneMatrix)}");
-        //    return doneMatrix;
-
-        //    //не совсем рабочий метод
-        //}
-        #endregion
-
-        public List<List<double>> ArrayNormalization(List<List<double>> matrix) //нормализуем, чтобы впихнуть в графический файл
+        private List<List<double>> ArrayNormalization(List<List<double>> matrix) //нормализуем, чтобы впихнуть в графический файл
         {
             double maxFromMatrix = FindMax(matrix);
             double minFrMatrix = FindMin(matrix);
+            Console.WriteLine($"Мин до норм = {minFrMatrix}. Макс до норм = {maxFromMatrix}");
             double delta = (maxFromMatrix - minFrMatrix) / 255.0; //хороший вопрос - не напутал ли я чего с общим диапазоном (0-255)
-            double increasingDelta = minFrMatrix - delta;
+
+
+            double increasingDelta = minFrMatrix/* - delta*/;
+            Console.WriteLine($"Increm del {Math.Ceiling(increasingDelta)}");
 
             for (int i = 0; i < matrix.Count; i++)
             {
                 for (int j = 0; j < matrix.Count; j++)
                 {
-
                     for (int k = 0; k < 256; k++) //каждое значение перебирается еще до 255 раз
                     {
-                        increasingDelta += delta;
                         //уверен, есть и более эффективный алгоритм. Но пока так
-                        //перебор чисел на принадлежность какому-то отрезку
-                        if ((matrix[i][j] >= increasingDelta) && (matrix[i][j] <= increasingDelta + delta))
+                        //перебор чисел на принадлежность какому-то промежутку
+                        if ((matrix[i][j] >= Math.Floor(increasingDelta)) && (matrix[i][j] < Math.Ceiling(increasingDelta + delta)))
                         {
+                            increasingDelta += delta;
                             matrix[i][j] = k;
                             break;
                         }
 
                         if (k == 255)
                         {
+                            //Console.WriteLine($"{Math.Floor(increasingDelta)} против {matrix[i][j]} против {Math.Ceiling(increasingDelta + delta)}");
                             Console.WriteLine("есть проблемка");
+
+                            if ((matrix[i][j] >= maxFromMatrix - delta) && (matrix[i][j] <= maxFromMatrix))
+                            {
+                                matrix[i][j] = k;
+                                break;
+                            }
+
+                            k -= 1;
                         }
+
+                        increasingDelta += delta;
                     }
 
                     increasingDelta = minFrMatrix - delta;
                 }
+                increasingDelta = minFrMatrix - delta;
             }
 
-            Console.WriteLine("Normalization");
+            Console.WriteLine($"\nMaxNorm = {FindMax(matrix)}; MinNorm = {FindMin(matrix)}\n");
+            if (FindMax(matrix) == 0)
+            {
+                throw new Exception("меньше 255\n");
+            }
             //Console.WriteLine($"После нормализации {AverageNum(matrix)}");
+            Console.WriteLine("Normalization");
             return matrix;
         }
 
-        public List<List<double>> ArrayDivMin(List<List<double>> doneMatrix) //разделим на минимум
+        private List<List<double>> ArrayRemainderOfDivision(List<List<double>> matrix, int dentor) //нормализуем, чтобы впихнуть в графический файл
         {
-            //не знаю точно, пригодится ли это, но пусть будет
-            double minFromMatrix = FindMin(doneMatrix);
+            //просто не нравятся некоротые числа
 
-            for (int i = 0; i < doneMatrix.Count; i++)
+            for (int i = 0; i < matrix.Count; i++)
             {
-                for (int j = 0; j < doneMatrix.Count; j++)
+                for (int j = 0; j < matrix.Count; j++)
                 {
-                    doneMatrix[i][j] = Math.Round(doneMatrix[i][j] / minFromMatrix, 2);
+                    matrix[i][j] = Math.Round(matrix[i][j]) % dentor; //как альтернатива
                 }
             }
 
-            Console.WriteLine("Normalization");
-            //Console.WriteLine($"После нормализации {AverageNum(doneMatrix)}");
-            return doneMatrix;
+            Console.WriteLine("Rem of div");
+            return matrix;
         }
 
+        private List<List<double>> ArrayDivMin(List<List<double>> matrix) //разделим на минимум
+        {
+            //не знаю точно, пригодится ли это, но пусть будет
+            double minFromMatrix = FindMin(matrix);
 
+            for (int i = 0; i < matrix.Count; i++)
+            {
+                for (int j = 0; j < matrix.Count; j++)
+                {
+                    matrix[i][j] = Math.Round(matrix[i][j] / minFromMatrix, 2);
+                }
+            }
+
+            Console.WriteLine("DivMin");
+            //Console.WriteLine($"После нормализации {AverageNum(doneMatrix)}");
+            return matrix;
+        }
+
+        private List<List<double>> ArrayInterpolation(List<List<double>> matrix) //если я правильно понял статью с википедии... но...
+        {
+            double kX1 = 0.5;
+            double kX2 = 0.5;
+            double kY1 = 0.5;
+            double kY2 = 0.5;
+
+            for (int i = 1; i < matrix.Count - 1; i++)
+            {
+                for (int j = 1; j < matrix.Count - 1; j++)
+                {
+                    //double kX1 = ((i + 1) - (i)) / ((i + 1) - (i - 1.0));
+                    //double kX2 = (i - (i - 1)) / ((i + 1) - (i - 1.0));
+                    //double kY1 = ((j + 1) - (j)) / ((j + 1) - (j - 1.0));
+                    //double kY2 = (j - (j - 1)) / ((j + 1) - (j - 1.0));
+                    //но в данном случае они все равны 0,5...
+                    //.0 для единицы... почему это надо ставить, хотя тип double
+
+                    double r1 = kX1 * matrix[i - 1][j] + kX2 * matrix[i + 1][j];
+                    double r2 = kX1 * matrix[i][j - 1] + kX2 * matrix[i][j + 1];
+
+                    double interp = kY1 * r1 + kY2 * r2;
+
+                    matrix[i][j] = interp;
+                }
+            }
+
+            return matrix;
+        }
+
+        //------------------------------------------------------------------------------------------------------------------------------------------//
         private long AverageNum(List<List<double>> matrix) //среднее значение в массиве
         {
             long result = 0;
@@ -315,7 +514,7 @@ namespace PerlinNoise_console
 
                 }
             }
-            Console.WriteLine("max");
+            //Console.WriteLine("max");
             return maxFromMatrix;
         }
 
@@ -335,7 +534,7 @@ namespace PerlinNoise_console
 
                 }
             }
-            Console.WriteLine("min");
+            //Console.WriteLine("min");
             return mixFromMatrix;
         }
     }
